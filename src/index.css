@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --bg-page: #faf6f1;
+  --bg-card: #ffffff;
+  --bg-input: #f5f1ec;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #999999;
+  --border: #e8e0d8;
+  --coral: #e8735a;
+  --coral-light: #fdf0ed;
+  --coral-dark: #d4624b;
+  --blue-light: #eef4fb;
+  --card-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.dark {
+  --bg-page: #1a1d23;
+  --bg-card: #23272f;
+  --bg-input: #2a2e36;
+  --text-primary: #f0f0f0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #666666;
+  --border: #333840;
+  --coral: #e8735a;
+  --coral-light: rgba(232,115,90,0.15);
+  --coral-dark: #f0866e;
+  --blue-light: rgba(100,150,255,0.1);
+  --card-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  transition: background 0.3s, color 0.3s;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
+.dark ::-webkit-scrollbar-thumb { background:#444; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+.leaflet-container { border-radius: 10px; z-index: 1; }
+
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+.skeleton { background:linear-gradient(90deg,var(--bg-input) 25%,var(--border) 50%,var(--bg-input) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; }
+
+input:focus, textarea:focus, select:focus { outline:none; border-color:var(--coral) !important; }
+
+.iss-icon { background:none !important; border:none !important; }
+
+.iss-tooltip {
+  background: white !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+}
+.iss-tooltip::before { border-bottom-color: #e0e0e0 !important; }
+.dark .iss-tooltip {
+  background: #23272f !important;
+  border-color: #333840 !important;
+  color: #f0f0f0 !important;
+}
