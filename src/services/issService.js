@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const ISS_NOW_URL = 'http://api.open-notify.org/iss-now.json';
-const ASTROS_URL = 'http://api.open-notify.org/astros.json';
+const ISS_NOW_URL = 'https://api.open-notify.org/iss-now.json';
+const ASTROS_URL = 'https://api.open-notify.org/astros.json';
 
 /**
  * Fetch current ISS position
