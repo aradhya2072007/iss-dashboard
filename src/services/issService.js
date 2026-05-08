@@ -1,27 +1,38 @@
 import axios from 'axios';
 
-const ISS_NOW_URL = 'https://api.open-notify.org/iss-now.json';
+// Primary: wheretheiss.at (HTTPS), Fallback: open-notify via CORS proxy
+const ISS_PRIMARY = 'https://api.wheretheiss.at/v1/satellites/25544';
+const ISS_FALLBACK = 'https://api.open-notify.org/iss-now.json';
 const ASTROS_URL = 'https://api.open-notify.org/astros.json';
 
 /**
  * Fetch current ISS position
  */
 export const fetchISSPosition = async () => {
+  // Try primary HTTPS API first
   try {
-    const response = await axios.get(ISS_NOW_URL, { timeout: 10000 });
-    if (response.data.message === 'success') {
-      return {
-        latitude: parseFloat(response.data.iss_position.latitude),
-        longitude: parseFloat(response.data.iss_position.longitude),
-        timestamp: response.data.timestamp,
-      };
+    const response = await axios.get(ISS_PRIMARY, { timeout: 8000 });
+    const d = response.data;
+    return {
+      latitude: parseFloat(d.latitude),
+      longitude: parseFloat(d.longitude),
+      timestamp: Math.floor(d.timestamp),
+    };
+  } catch {
+    // Fallback
+    try {
+      const response = await axios.get(ISS_FALLBACK, { timeout: 8000 });
+      if (response.data.message === 'success') {
+        return {
+          latitude: parseFloat(response.data.iss_position.latitude),
+          longitude: parseFloat(response.data.iss_position.longitude),
+          timestamp: response.data.timestamp,
+        };
+      }
+    } catch {
+      // both failed
     }
-    throw new Error('Failed to fetch ISS position');
-  } catch (error) {
-    if (error.response?.status === 429) {
-      throw new Error('Rate limited — will retry on next cycle');
-    }
-    throw new Error(error.message || 'Failed to fetch ISS position');
+    throw new Error('Unable to fetch ISS position');
   }
 };
 
@@ -45,10 +56,9 @@ export const fetchAstronauts = async () => {
 
 /**
  * Calculate distance between two points using Haversine formula
- * Returns distance in kilometers
  */
 export const haversineDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -62,18 +72,14 @@ export const haversineDistance = (lat1, lon1, lat2, lon2) => {
 const toRad = (deg) => deg * (Math.PI / 180);
 
 /**
- * Calculate speed in km/h from two positions and time difference
+ * Calculate speed in km/h
  */
 export const calculateSpeed = (pos1, pos2) => {
   if (!pos1 || !pos2) return 0;
-  const distance = haversineDistance(
-    pos1.latitude, pos1.longitude,
-    pos2.latitude, pos2.longitude
-  );
-  const timeDiff = Math.abs(pos2.timestamp - pos1.timestamp); // in seconds
+  const distance = haversineDistance(pos1.latitude, pos1.longitude, pos2.latitude, pos2.longitude);
+  const timeDiff = Math.abs(pos2.timestamp - pos1.timestamp);
   if (timeDiff === 0) return 0;
-  const speed = (distance / timeDiff) * 3600; // km/h
-  return Math.round(speed * 100) / 100;
+  return Math.round(((distance / timeDiff) * 3600) * 100) / 100;
 };
 
 /**
@@ -94,9 +100,6 @@ export const getNearestLocation = async (lat, lon) => {
   }
 };
 
-/**
- * Simple ocean determination based on coordinates
- */
 const getOceanName = (lat, lon) => {
   if (lon > 20 && lon < 147 && lat > -60 && lat < 30) return 'Over ocean / remote area (Indian Ocean)';
   if (lon > -80 && lon < 0 && lat > -60 && lat < 60) return 'Over ocean / remote area (Atlantic Ocean)';
@@ -105,4 +108,3 @@ const getOceanName = (lat, lon) => {
   if (lat < -60) return 'Over ocean / remote area (Southern Ocean)';
   return 'Over ocean / remote area';
 };
-

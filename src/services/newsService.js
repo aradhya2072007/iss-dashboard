@@ -1,12 +1,8 @@
 import axios from 'axios';
 
-const NEWS_API_BASE = 'https://newsapi.org/v2';
 const CACHE_KEY = 'news_cache';
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in ms
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
-/**
- * Get cached news articles from localStorage
- */
 const getCachedNews = () => {
   try {
     const cached = localStorage.getItem(CACHE_KEY);
@@ -23,25 +19,31 @@ const getCachedNews = () => {
   }
 };
 
-/**
- * Cache news articles to localStorage
- */
 const setCacheNews = (data) => {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      data,
-      timestamp: Date.now(),
-    }));
-  } catch {
-    // localStorage might be full
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch {}
+};
+
+/**
+ * Build the NewsAPI URL — on production (Vercel), use a CORS proxy
+ * because NewsAPI free tier blocks non-localhost origins
+ */
+const getNewsUrl = (endpoint) => {
+  const isLocalhost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  if (isLocalhost) {
+    return `https://newsapi.org/v2/${endpoint}`;
   }
+  // Use a public CORS proxy for production
+  return `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://newsapi.org/v2/${endpoint}`)}`;
 };
 
 /**
  * Fetch top headlines from NewsAPI
  */
 export const fetchNews = async (query = '') => {
-  // Check cache first
   const cached = getCachedNews();
   if (cached && !query) return cached;
 
@@ -51,22 +53,15 @@ export const fetchNews = async (query = '') => {
   }
 
   try {
-    const params = {
-      apiKey,
-      pageSize: 10,
-      language: 'en',
-    };
-
-    let url = `${NEWS_API_BASE}/top-headlines`;
+    let endpoint;
     if (query) {
-      url = `${NEWS_API_BASE}/everything`;
-      params.q = query;
-      params.sortBy = 'publishedAt';
+      endpoint = `everything?apiKey=${apiKey}&pageSize=10&language=en&q=${encodeURIComponent(query)}&sortBy=publishedAt`;
     } else {
-      params.country = 'us';
+      endpoint = `top-headlines?apiKey=${apiKey}&pageSize=10&language=en&country=us`;
     }
 
-    const response = await axios.get(url, { params });
+    const url = getNewsUrl(endpoint);
+    const response = await axios.get(url, { timeout: 15000 });
 
     if (response.data.status === 'ok') {
       const articles = response.data.articles.map((article, index) => ({
@@ -81,19 +76,14 @@ export const fetchNews = async (query = '') => {
         content: article.content,
       }));
 
-      if (!query) {
-        setCacheNews(articles);
-      }
+      if (!query) setCacheNews(articles);
       return articles;
     }
     throw new Error(response.data.message || 'Failed to fetch news');
   } catch (error) {
-    if (error.response?.status === 401) {
-      throw new Error('Invalid API key. Please check your VITE_NEWS_API_KEY.');
-    }
-    if (error.response?.status === 429) {
-      throw new Error('API rate limit reached. Try again later.');
-    }
+    if (error.response?.status === 401) throw new Error('Invalid API key.');
+    if (error.response?.status === 426) throw new Error('NewsAPI requires upgrade for production. Using cached data.');
+    if (error.response?.status === 429) throw new Error('API rate limit reached. Try again later.');
     throw new Error(error.message || 'Failed to fetch news');
   }
 };
@@ -104,13 +94,9 @@ export const fetchNews = async (query = '') => {
 export const sortArticles = (articles, sortBy) => {
   const sorted = [...articles];
   switch (sortBy) {
-    case 'date-desc':
-      return sorted.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-    case 'date-asc':
-      return sorted.sort((a, b) => new Date(a.publishedAt) - new Date(b.publishedAt));
-    case 'source':
-      return sorted.sort((a, b) => a.source.localeCompare(b.source));
-    default:
-      return sorted;
+    case 'date-desc': return sorted.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    case 'date-asc': return sorted.sort((a, b) => new Date(a.publishedAt) - new Date(b.publishedAt));
+    case 'source': return sorted.sort((a, b) => a.source.localeCompare(b.source));
+    default: return sorted;
   }
 };
