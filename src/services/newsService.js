@@ -33,11 +33,9 @@ const getNewsUrl = (endpoint) => {
   const isLocalhost = typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-  if (isLocalhost) {
-    return `https://newsapi.org/v2/${endpoint}`;
-  }
-  // Use a public CORS proxy for production
-  return `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://newsapi.org/v2/${endpoint}`)}`;
+  const base = `https://newsapi.org/v2/${endpoint}`;
+  if (isLocalhost) return base;
+  return `https://corsproxy.io/?url=${encodeURIComponent(base)}`;
 };
 
 /**
